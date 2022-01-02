@@ -1405,16 +1405,25 @@ enum sway_container_layout container_current_parent_layout(
 	return con->current.workspace->current.layout;
 }
 
+// list_t *container_get_siblings(struct sway_container *container, bool descend) {
 list_t *container_get_siblings(struct sway_container *container) {
+	// TODO: how to identify only the split windows that cause gaps and how to filter the list(s)?
 	if (container->pending.parent) {
+	// if (container->pending.parent && descend) {
+		printf("[container_get_siblings]: 1. container->pending.parent->pending.children\n");
 		return container->pending.parent->pending.children;
 	}
 	if (container_is_scratchpad_hidden(container)) {
+		printf("[container_get_siblings]: 2. NULL\n");
 		return NULL;
 	}
+	// TODO: is workspace->tiling already a list of all tiling windows in the workspace?
+	// no i don't think so, anything is either tiling or floating
 	if (list_find(container->pending.workspace->tiling, container) != -1) {
+		printf("[container_get_siblings]: 3. container->pending.workspace->tiling\n");
 		return container->pending.workspace->tiling;
 	}
+	printf("[container_get_siblings]: 4. container->pending.workspace->floating\n");
 	return container->pending.workspace->floating;
 }
 

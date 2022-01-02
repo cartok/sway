@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    "wlr_output.h": "c",
+    "input-event-codes.h": "c",
+    "ctype.h": "c"
+  }
+}

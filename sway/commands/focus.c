@@ -160,8 +160,23 @@ static struct sway_node *node_get_in_direction_tiling(
 		int idx = container_sibling_index(current);
 		enum sway_container_layout parent_layout =
 			container_parent_layout(current);
+		// Maybe the siblings list is the problem why descend does not work properly
+		// TODO: print siblings (json function?)
+		// printf()
 		list_t *siblings = container_get_siblings(current);
-
+		// TODO: Create other sibling list from the workspace that only includes
+		// always the first children of split(h|v) containers, no children of other layouts.
+		// or maybe instead navigate by this logic:
+		/*
+			IF PARENT IS split(h|v) &&
+				IF DESIRED INDEX EXISTS IN SIBLINGS -> RETURN
+				ELSE REPEAT WITH PARENTs PARENT
+		*/
+		// TODO: indexe wrappen, also wenn ich nach links will in nem tabbed...
+		// focusing hat viele unlogischen logiken / bugs...
+		// man bleibt zum teil in den children hängen obwohl es der stanard 
+		// focus command ist. das sollte nie passieren.
+		printf("# dir: %d\n", dir);
 		if (dir == WLR_DIRECTION_LEFT || dir == WLR_DIRECTION_RIGHT) {
 			if (parent_layout == L_HORIZ || parent_layout == L_TABBED) {
 				can_move = true;
@@ -173,24 +188,35 @@ static struct sway_node *node_get_in_direction_tiling(
 				desired = idx + (dir == WLR_DIRECTION_UP ? -1 : 1);
 			}
 		}
+		printf("# desired: %d\n", desired);
+		printf("# can_move: %d\n", can_move);
+		printf("# siblings->length: %d\n", (int) (siblings->length));
 
 		if (can_move) {
 			if (desired < 0 || desired >= siblings->length) {
+				printf("# out of bounds\n");
 				int len = siblings->length;
 				if (config->focus_wrapping != WRAP_NO && !wrap_candidate
 						&& len > 1) {
+					printf("# wrapping if enabled\n");
 					if (desired < 0) {
+						printf("# set wrap candidate\n");
 						wrap_candidate = siblings->items[len-1];
 					} else {
+						printf("# set wrap candidate\n");
 						wrap_candidate = siblings->items[0];
 					}
 					if (config->focus_wrapping == WRAP_FORCE) {
 						struct sway_container *c = seat_get_focus_inactive_view(
 								seat, &wrap_candidate->node);
+						printf("# forced wrap\n");
 						return &c->node;
 					}
 				}
 			} else {
+				printf("# taking sibling\n");
+				printf("# descend: %c\n", descend);
+
 				struct sway_container *desired_con = siblings->items[desired];
 				if (!descend) {
 					return &desired_con->node;
@@ -202,6 +228,7 @@ static struct sway_node *node_get_in_direction_tiling(
 			}
 		}
 
+		printf("# taking pending parent -> going up till workspace level to check for focus targets!\n");
 		current = current->pending.parent;
 	}
 
@@ -215,6 +242,7 @@ static struct sway_node *node_get_in_direction_tiling(
 
 	// If there is a wrap candidate, return its focus inactive view
 	if (wrap_candidate) {
+		printf("# return focus to inactive view in wrap candiate\n");
 		struct sway_container *wrap_inactive = seat_get_focus_inactive_view(
 				seat, &wrap_candidate->node);
 		return &wrap_inactive->node;
@@ -424,6 +452,7 @@ struct cmd_results *cmd_focus(int argc, char **argv) {
 				"Expected 'focus <direction|next|prev|parent|child|mode_toggle|floating|tiling>' "
 				"or 'focus output <direction|name>'");
 		} else if (argc == 2 && strcasecmp(argv[1], "sibling") == 0) {
+			// TODO: fix descend for 'next sibling'!
 			descend = false;
 		}
 	}
@@ -441,6 +470,7 @@ struct cmd_results *cmd_focus(int argc, char **argv) {
 		}
 
 		struct sway_node *node =
+			// TODO: might want to also change this function 
 			get_node_in_output_direction(new_output, direction);
 		seat_set_focus(seat, node);
 		seat_consider_warp_to_focus(seat);
